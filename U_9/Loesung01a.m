@@ -28,7 +28,7 @@ function Loesung01a
     global k;
     global gamma;
     k = 16;             % hidden units  (4, 8, 16)
-    gamma = 1.0;        % scaling-factor
+    gamma = 0.75;        % scaling-factor
     max_E = 1.0;        %train network until sum of squared errors is smaller than max_E
     E = max_E + 1;      %initialize E with a value greater than max_E
 
