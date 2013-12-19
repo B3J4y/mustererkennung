@@ -1,12 +1,15 @@
 function backprog
     Aufgabe = 'a'
-    backprogA(1);
-    
+    backprogA(1, 0);
+
+    Aufgabe = 'b'
+    backprogA(1, 0.001);
+
     Aufgabe = 'd'
-    backprogA(0.75);
+    backprogA(0.75, 0.01);
 end
 
-function [] =  backprogA(g)
+function [] =  backprogA(g, momentum)
     TRAINING = 60;
     TESTING = 90;
     data = dlmread('pendigits-training.txt');
@@ -35,6 +38,9 @@ function [] =  backprogA(g)
 
     global k;
     global gamma;
+    global alpha;
+    
+    alpha = momentum;
     k = 16;             % hidden units  (4, 8, 16)
     gamma = g;        % scaling-factor
     max_E = 1.0;        %train network until sum of squared errors is smaller than max_E
@@ -53,14 +59,25 @@ function [] =  backprogA(g)
 
     % apply backprop-algo for every training-row on network while sum of
     % squared errors is greater than max_E
-
+    
+    
+    old_delta1= 0;
+    old_delta2= 0;
     while E_training > E_testing
         numOfIterations = numOfIterations + 1;
-        [E_testing, ~, ~] = firstStream(testing, testing_result, W_1_overline, W_2_overline);
-        [E_training, W_batch_1, W_batch_2] = firstStream(training, training_result, W_1_overline, W_2_overline);
+
+        
+        [E_training, W_batch_1, W_batch_2, delta1, delta2] = firstStream(training, training_result, W_1_overline, W_2_overline, old_delta1, old_delta2);
+        
         W_1_overline = W_1_overline + W_batch_1;
-        W_2_overline = W_2_overline + W_batch_2;  
+        W_2_overline = W_2_overline + W_batch_2;
+        old_delta1 = delta1;
+        old_delta2 = delta2;
+        [E_testing, ~, ~, ~, ~] = firstStream(testing, testing_result, W_1_overline, W_2_overline, 0, 0);
+        
         %write out E
+        E_testing;
+        E_training;
     end
 
     E_training
@@ -75,9 +92,11 @@ function [training_result] = initialResult(training)
     training_result(idx) = 1;
 end
 
-function[E, W_batch_1, W_batch_2] = firstStream(training, training_result, W_1_overline, W_2_overline )
+function[E, W_batch_1, W_batch_2, deltaW_1, deltaW_2] = firstStream(training, training_result, W_1_overline, W_2_overline, old_delta1, old_delta2)
     global k;
     global gamma;
+    global alpha;
+    
     E=0;
     W_batch_1 =  zeros(size(training, 2) + 1, k);
     W_batch_2 = zeros(k + 1, 10);
@@ -105,14 +124,11 @@ function[E, W_batch_1, W_batch_2] = firstStream(training, training_result, W_1_o
         %sum up sum of squared errors
         E = E + sum(e.^2/2);
 
-
-
-
         d_2 = D_2 * e;
         d_1 = D_1 * W_2 * d_2;
 
-        deltaW_2 = transpose(-gamma * d_2 * o_1_hat);
-        deltaW_1 = transpose(-gamma * d_1 * o__hat);
+        deltaW_2 = transpose(-gamma * d_2 * o_1_hat) + alpha * old_delta2;
+        deltaW_1 = transpose(-gamma * d_1 * o__hat) + alpha * old_delta1;
 
         W_batch_1 = W_batch_1 + deltaW_1;
         W_batch_2 = W_batch_2 + deltaW_2;
